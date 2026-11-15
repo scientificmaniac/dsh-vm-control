@@ -270,6 +270,8 @@ npm run pack:dist  # pack without tests (offline packaging)
 
 4. The tag triggers `.github/workflows/release.yml`, which **re-runs** the tests and packaging (no reuse of older artifacts), then attaches the `.tgz` and `SHA256SUMS.txt` to a GitHub Release whose body comes from `RELEASE_NOTES/v<version>.md`.
 
+`SHA256SUMS.txt` describes **the artifact built by Actions**. Re-running `npm run release` locally produces slightly different bytes (npm writes file mtimes into the tar headers), so trust the checksum attached to the release; the package *contents* are verified entry by entry in step 5 and match locally.
+
 A tag that disagrees with `package.json` makes the release job fail — a mislabelled release is worse than no release.
 
 ## Tests

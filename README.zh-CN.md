@@ -274,6 +274,8 @@ npm run pack:dist  # 跳过测试直接出包（离线出包用）
 
 4. 推标签会触发 `.github/workflows/release.yml`：**重新**跑测试与打包（不复用旧产物），把 `.tgz` 与 `SHA256SUMS.txt` 附到 GitHub Release，正文取自 `RELEASE_NOTES/v<版本>.md`。
 
+`SHA256SUMS.txt` 对应的是 **Actions 打出的那一个包**。本地重新 `npm run release` 得到的字节数会略有不同（npm 会把文件时间写进 tar 头），所以校验和要以发行附件里的那份为准；包的**内容**（文件清单与各文件内容）由第 5 步逐条核对，与本地一致。
+
 标签与 `package.json` 版本不一致时，发行工作流会直接失败——打错标签的发行版比不发更糟。
 
 ## 测试
