@@ -1,0 +1,62 @@
+# 推送形如 v1.2.3 的标签即触发一次发行。
+#
+# 这里刻意**重新跑一遍测试并重新打包**，而不是复用上一次 CI 的产物：发行包的字节必须来自
+# 与标签同一个提交，而 GitHub 的 artifact 有保留期、也可能被人手工替换。多花一分钟换来
+# 「这个 tag 对应的包就是这份代码打出来的」，值得。
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 发行说明与变更日志要从仓库里读，浅克隆就够；保留完整历史便于核对标签指向。
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify version, changelog, notes and syntax
+        # GITHUB_REF_NAME 由 Actions 注入，脚本会用它与 package.json 的版本对照。
+        run: node scripts/release.mjs --check-only
+
+      - name: Unit, API, client and integration tests
+        run: npm test
+
+      - name: Build the package
+        run: npm run pack:dist
+
+      - name: Upload the artifacts as a build record
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-vm-control-${{ github.ref_name }}
+          path: |
+            dist/*.tgz
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: dsh-vm-control ${{ github.ref_name }}
+          body_path: RELEASE_NOTES/${{ github.ref_name }}.md
+          files: |
+            dist/*.tgz
+            dist/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false

@@ -3,3 +3,5 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+# 发行产物：由 `npm run release` 生成，不进入版本库
+dist/

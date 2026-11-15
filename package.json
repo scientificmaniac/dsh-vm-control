@@ -16,9 +16,21 @@
   "engines": {
     "node": ">=20"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scientificmaniac/dsh-vm-control.git"
+  },
+  "homepage": "https://github.com/scientificmaniac/dsh-vm-control#readme",
+  "bugs": {
+    "url": "https://github.com/scientificmaniac/dsh-vm-control/issues"
+  },
   "scripts": {
     "test": "node test/unit.mjs && node test/api.mjs && node test/client-smoke.mjs && node test/ssh-vault-link.mjs",
-    "test:live": "node test/live.mjs"
+    "test:live": "node test/live.mjs",
+    "check": "node scripts/release.mjs --check-only",
+    "build": "node scripts/release.mjs --check-only",
+    "pack:dist": "node scripts/release.mjs --skip-tests",
+    "release": "node scripts/release.mjs"
   },
   "exports": {
     ".": "./index.js",
@@ -32,6 +44,7 @@
     "lib",
     "locale",
     "cordis.patch.yml",
+    "dsh-market-entry.yml",
     "icon.svg",
     "README.md",
     "README.zh-CN.md",

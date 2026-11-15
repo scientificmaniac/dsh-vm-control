@@ -244,6 +244,34 @@ The layering rule is simple: a new action puts **argument assembly in `vmrun.js`
 
 macOS (Fusion) and Linux share the same code paths and the `ps` sampler, but have not been exercised on a real Fusion host. If you hit a difference, an issue with the `vmrun` version and output is welcome.
 
+## Releasing
+
+There is no compile step (plain ESM on the host, hand-written React elements on the client), so "build" here means **verify**:
+
+```bash
+npm run check      # version, changelog and release notes agree, plus module syntax
+npm run release    # check → tests → pack → artifact verification
+npm run pack:dist  # pack without tests (offline packaging)
+```
+
+`npm run release` writes `dist/dsh-vm-control-<version>.tgz` and `SHA256SUMS.txt`, then asserts the tarball contains `index.js`, `client.js`, `lib/**`, `cordis.patch.yml`, `dsh-market-entry.yml`, `README*` and `LICENSE`, and that `test/`, `node_modules` and `.github` stayed out.
+
+**Cutting a release**
+
+1. Bump the version in `package.json`, add the same section to both `CHANGELOG` files, and write `RELEASE_NOTES/v<version>.md`;
+2. `npm run release` — any disagreement between those three fails immediately instead of in CI;
+3. Commit, tag, push:
+
+   ```bash
+   git commit -am "chore(release): v1.1.0"
+   git tag -a v1.1.0 -m "dsh-vm-control 1.1.0"
+   git push origin main && git push origin v1.1.0
+   ```
+
+4. The tag triggers `.github/workflows/release.yml`, which **re-runs** the tests and packaging (no reuse of older artifacts), then attaches the `.tgz` and `SHA256SUMS.txt` to a GitHub Release whose body comes from `RELEASE_NOTES/v<version>.md`.
+
+A tag that disagrees with `package.json` makes the release job fail — a mislabelled release is worse than no release.
+
 ## Tests
 
 ```bash

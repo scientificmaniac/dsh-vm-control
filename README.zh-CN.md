@@ -248,6 +248,34 @@ vmrun 的报错是英文散文，同一句 `Cannot open VM` 既可能是路径�
 
 macOS（Fusion）与 Linux 走同一套代码路径与 `ps` 采集，但未在真实 Fusion 主机上跑过；如果你遇到了差异，欢迎提 issue 并附上 `vmrun` 的版本与输出。
 
+## 发行与打包
+
+插件没有编译步骤（Host 侧是纯 ESM，客户端是手写 React 元素），所以「构建」实际是**校验**：
+
+```bash
+npm run check      # 版本 / 变更日志 / 发行说明三者一致 + 全部模块语法
+npm run release    # 检查 → 测试 → 打包 → 校验产物
+npm run pack:dist  # 跳过测试直接出包（离线出包用）
+```
+
+`npm run release` 在 `dist/` 生成 `dsh-vm-control-<版本>.tgz` 与 `SHA256SUMS.txt`，并核对包内含 `index.js`、`client.js`、`lib/**`、`cordis.patch.yml`、`dsh-market-entry.yml`、`README*`、`LICENSE`，同时确保 `test/`、`node_modules`、`.github` 没有被带进去。
+
+**发一次版**
+
+1. 改 `package.json` 的版本，在两份 `CHANGELOG` 里加同版本小节，写 `RELEASE_NOTES/v<版本>.md`；
+2. `npm run release` —— 三者不一致会立刻失败，不必等 CI 告诉你；
+3. 提交、打标签、推送：
+
+   ```bash
+   git commit -am "chore(release): v1.1.0"
+   git tag -a v1.1.0 -m "dsh-vm-control 1.1.0"
+   git push origin main && git push origin v1.1.0
+   ```
+
+4. 推标签会触发 `.github/workflows/release.yml`：**重新**跑测试与打包（不复用旧产物），把 `.tgz` 与 `SHA256SUMS.txt` 附到 GitHub Release，正文取自 `RELEASE_NOTES/v<版本>.md`。
+
+标签与 `package.json` 版本不一致时，发行工作流会直接失败——打错标签的发行版比不发更糟。
+
 ## 测试
 
 ```bash
