@@ -1,6 +1,6 @@
 {
   "name": "dsh-vm-control",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "VMware Workstation / Player / Fusion virtual machine control for the DeepSeek Harness — power, snapshots, live resources and network configuration",
   "license": "MIT",
@@ -17,7 +17,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node test/unit.mjs && node test/api.mjs && node test/client-smoke.mjs",
+    "test": "node test/unit.mjs && node test/api.mjs && node test/client-smoke.mjs && node test/ssh-vault-link.mjs",
     "test:live": "node test/live.mjs"
   },
   "exports": {

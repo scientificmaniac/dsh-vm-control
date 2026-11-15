@@ -40,6 +40,7 @@ import {
   stateLabel,
 } from './lib/format.js'
 import { assertSupportedPlatform } from './lib/platform.js'
+import { aliasFor, buildSshPlan, renderSshPlan } from './lib/ssh-import.js'
 import { Store } from './lib/store.js'
 import { API_PREFIX, createVmApi } from './lib/vm-api.js'
 import { Vmrun } from './lib/vmrun.js'
@@ -457,6 +458,9 @@ export function apply(ctx, config = {}) {
       + 'live resource use, snapshots). action=set rewrites VMX entries — vCPUs, memory, the first NIC connection type and network, '
       + 'tools.syncTime, displayName — and requires the VM to be powered off, because VMware writes the same file while it runs; '
       + 'a backup of the previous VMX is left next to it. action=networks lists host virtual networks for custom NIC mode. '
+      + 'action=ssh prepares the SSH access details of a VM (alias, host, port, user, auth) for import into the dsh-ssh-vault '
+      + 'plugin; it never writes into that vault itself — the user confirms the import on the settings page, because the vault is '
+      + 'encrypted with ssh-vault\'s own key. '
       + 'action=register adds a vmx that lives outside the search roots; unregister drops the entry only; delete removes the VM '
       + '(trash by default, purge with files only when permissions.delete is enabled AND confirm=true).',
     parameters: {
@@ -465,11 +469,16 @@ export function apply(ctx, config = {}) {
       properties: {
         action: {
           type: 'string',
-          enum: ['list', 'show', 'set', 'networks', 'register', 'unregister', 'delete'],
+          enum: ['list', 'show', 'set', 'networks', 'ssh', 'register', 'unregister', 'delete'],
           description: 'list is the same output as vm_list; show details one VM; set rewrites VMX parameters; networks lists host '
-            + 'virtual networks; register/unregister manage the plugin inventory; delete removes a VM.',
+            + 'virtual networks; ssh proposes the SSH fields for a dsh-ssh-vault import; register/unregister manage the plugin '
+            + 'inventory; delete removes a VM.',
         },
-        vm: { type: 'string', description: 'VM name or vmx path. Required for show, set, unregister and delete.' },
+        vm: { type: 'string', description: 'VM name or vmx path. Required for show, set, ssh, unregister and delete.' },
+        host: {
+          type: 'string',
+          description: 'On ssh: the address to use. Omit to ask VMware Tools for the guest IP (only possible while the VM runs).',
+        },
         vmx: { type: 'string', description: 'Absolute path to a .vmx file. Required for register.' },
         name: { type: 'string', description: 'Display name recorded by the plugin. Defaults to the VMX displayName on register.' },
         display_name: { type: 'string', description: 'On set: write this value into the VMX displayName entry.' },
@@ -522,6 +531,25 @@ export function apply(ctx, config = {}) {
       if (action === 'show') {
         const entry = await inventory.detail(args.vm, { includeSnapshots: true })
         return renderDetail(entry)
+      }
+      if (action === 'ssh') {
+        const entry = await inventory.detail(args.vm)
+        let host = typeof args.host === 'string' ? args.host.trim() : ''
+        let guest = { attempted: false }
+        if (host.length === 0 && entry.state === 'running') {
+          const info = await inventory.guestInfo(entry.vmx)
+          guest = { attempted: true, ok: info.available === true, ip: info.ip, tools: info.tools }
+          if (info.available === true) host = info.ip
+        }
+        // 导入本身由用户在设置页确认：保险库的密文只有 ssh-vault 自己能写，
+        // 模型没有那条通道，把它说清楚比让它反复尝试一个做不到的动作要好。
+        const listed = await inventory.list({ includeMetrics: false })
+        return renderSshPlan(buildSshPlan(entry, {
+          host,
+          guest,
+          alias: aliasFor(entry, listed.entries),
+          importAllowed: permissions.config === true,
+        }))
       }
       if (action === 'set') {
         requirePermission('config')

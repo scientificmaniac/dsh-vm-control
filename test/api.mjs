@@ -350,6 +350,37 @@ await test('guest 返回 Tools 状态与客户机 IP', async () => {
   assert.equal(response.body.value.guest.available, true)
 })
 
+await test('sshPlan 运行中向 VMware Tools 要地址并给出导入建议', async () => {
+  const { api, vmx } = await makeApi()
+  await request(api, { url: `${API_PREFIX}/power`, body: { id: vmx, action: 'start' } })
+  const response = await request(api, { url: `${API_PREFIX}/sshPlan`, body: { id: vmx } })
+  assert.equal(response.body.ok, true)
+  const plan = response.body.value.plan
+  assert.equal(plan.host, '192.168.234.129')
+  assert.equal(plan.port, 22)
+  assert.equal(plan.username, 'root')
+  assert.ok(plan.alias.length > 0)
+  assert.equal(plan.importAllowed, true)
+  // 计划里永远没有口令：界面在提交时才拿，Host 侧从不经手。
+  assert.equal(Object.prototype.hasOwnProperty.call(plan, 'password'), false)
+})
+
+await test('sshPlan 尊重显式地址，关机时不再打扰 Tools', async () => {
+  const { api, vmx, state } = await makeApi()
+  const response = await request(api, { url: `${API_PREFIX}/sshPlan`, body: { id: vmx, host: '10.1.2.3' } })
+  assert.equal(response.body.ok, true)
+  assert.equal(response.body.value.plan.host, '10.1.2.3')
+  assert.equal(response.body.value.plan.guest.attempted, false)
+  assert.deepEqual(state.calls, [], '关机的虚拟机不该被问客户机 IP')
+})
+
+await test('sshPlan 在 permissions.config 关闭时标记不可导入', async () => {
+  const { api, vmx } = await makeApi({ permissions: { power: true, snapshot: true, config: false, delete: false } })
+  const response = await request(api, { url: `${API_PREFIX}/sshPlan`, body: { id: vmx, host: '10.1.2.3' } })
+  assert.equal(response.body.ok, true)
+  assert.equal(response.body.value.plan.importAllowed, false)
+})
+
 await test('诊断接口可读可写', async () => {
   const { api } = await makeApi()
   const initial = await request(api, { url: `${API_PREFIX}/diagnostics`, body: {} })

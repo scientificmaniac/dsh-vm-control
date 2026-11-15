@@ -25,6 +25,15 @@ It does **not** try to defend against: a local administrator, an attacker who al
 - The password is requested only after `vmrun` reports that the VM is encrypted, and is handed to `vmrun` via `-vp`. VMware offers no other channel, so it is visible in the local process list for that process's lifetime. That exposure cannot be removed inside this plugin; it simply does not occur unless you manage encrypted VMs.
 - The diagnostics log redacts anything shaped like `-vp <password>`, `password=...` or `passphrase=...` before writing. That is a guard rail, not a complete DLP.
 
+## Cross-plugin import (dsh-ssh-vault)
+
+- This plugin **never holds the vault key** and never reads or writes ssh-vault's data files. The browser submits to ssh-vault's own `/ssh-vault/save`: same origin, cookies included, the same trust level as saving on its settings page.
+- The imported fields are a fixed allow-list (`SSH_VAULT_SAVE_FIELDS` in `lib/ssh-import.js`); `sudoPassword`, `bindAddress`, key uploads and renames are out of scope.
+- The SSH password exists only inside that one request: this plugin does not persist it, log it, read the vault back, or reuse the VM encryption password as an SSH password.
+- Probing (`POST ssh-vault/list`) is read-only, and the sibling's list is already masked (addresses and users are obfuscated, passwords never returned).
+- When the sibling is missing or the request is not trusted, the panel degrades to a copyable command — no permission changes, no new write path.
+- The import button follows `permissions.config`; disabling it removes only this write path, leaving power, snapshots and parameters untouched.
+
 ## Destructive operations
 
 - Deletion has three semantics; the default moves the folder to the plugin trash. Deleting files requires `permissions.delete: true` **and** `confirm: true`.

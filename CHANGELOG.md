@@ -4,6 +4,23 @@ All notable changes to this plugin are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-15
+
+### Added
+
+- dsh-ssh-vault integration: the "SSH import" action on a VM card turns the address, port, user and auth into one vault entry and writes it on confirm; `vm_config action=ssh` returns the same proposal plus where to click.
+- The proposal asks VMware Tools for the guest IP; when it is unavailable the field stays empty with a hint instead of inventing an address.
+- Alias normalisation: non-ASCII folded into separators, with a deterministic `-2` suffix when two VMs collide (ordered by vmx path codepoints, so the result is identical across platforms).
+- Default key detection (`~/.ssh/id_ed25519` → `id_ecdsa` → `id_rsa`); a hit makes key auth the default, so key users really do get one click.
+- Three distinct probe outcomes (not installed / not authenticated / other) each get their own message; when the sibling is absent the SSH command stays copyable and nothing else is locked.
+- `test/ssh-vault-link.mjs`: loads the sibling's real source, starts an in-memory vault and submits our payload, verifying the field contract, alias validation, overwrite semantics and that passwords never come back out.
+
+### Changed
+
+- `vm_config` gained the `ssh` action and a `host` parameter; the tool description explains why the model cannot write the vault itself (the ciphertext only answers to the sibling's key).
+- Import follows `permissions.config`; probing and copying do not.
+- Version bumped to 1.1.0.
+
 ## [1.0.0] - 2026-11-15
 
 First release.

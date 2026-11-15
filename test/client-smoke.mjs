@@ -190,10 +190,17 @@ await test('client.js 里引用的文案键都存在', async () => {
   for (const match of source.matchAll(/(?:\bt|fallbackT|tRef\.current)\('([A-Za-z0-9_.]+)'/g)) used.add(match[1])
   const missing = [...used].filter((key) => dict.zh[key] === undefined)
   assert.deepEqual(missing, [], `缺少文案：${missing.join(', ')}`)
-  // 反向：定义了却没有引用的键。只有动态拼接的键（状态词、权限名）与二元切换允许例外。
+  // 反向：定义了却没有引用的键。
+  //
+  // 有些键不会以 `t('key')` 的形式出现：校验函数返回的是键名、三元分支各给一个键名，
+  // 翻译发生在后面。所以「出现过同名字符串字面量」也算被引用——这比放宽成白名单更准，
+  // 删掉一个真没人用的键仍然会被抓住。
+  const literals = new Set()
+  for (const match of source.matchAll(/'([A-Za-z0-9_.-]+)'/g)) literals.add(match[1])
   const dynamicPrefixes = ['state', 'perm']
   const dynamicExact = new Set(['soft', 'hard'])
   const unused = Object.keys(dict.zh).filter((key) => !used.has(key)
+    && !literals.has(key)
     && !dynamicExact.has(key)
     && !dynamicPrefixes.some((prefix) => key.startsWith(prefix) && key.length > prefix.length))
   assert.deepEqual(unused, [], `未使用的文案：${unused.join(', ')}`)

@@ -20,6 +20,7 @@ The plugin drives VMware's own `vmrun` (shipped with Workstation / Player / Fusi
 - **Four model-facing tools** — `vm_list`, `vm_power`, `vm_snapshot`, `vm_config`. The agent addresses VMs by name or vmx path.
 - **Settings panel** — cards with state, specification, live CPU/memory use, NICs and paths, plus power, snapshot, config and delete actions. The list refreshes on an interval and stops while the page is hidden.
 - **`/vm` command** — inspect state, power and snapshot without going through the model.
+- **dsh-ssh-vault integration** — pick a VM and push its address, port, user and auth into the SSH vault in one step; degrades to a copyable command when that plugin is absent. See [the integration section](#dsh-ssh-vault-integration).
 
 It never changes the VM file layout and never converts disks: every action becomes either one `vmrun` command or a targeted rewrite of VMX text.
 
@@ -58,7 +59,7 @@ dsh plugin --profile desktop install .
 | `vm_list` | State, spec, live resource use, NICs, path; `vm=` for one VM | "which VMs are running" |
 | `vm_power` | `start` / `stop` / `suspend` / `pause` / `unpause` / `reset` / `status` | "shut CentOS 7 down" |
 | `vm_snapshot` | `list` / `create` / `revert` / `delete` | "snapshot Ubuntu before the upgrade" |
-| `vm_config` | `list` / `show` / `set` / `networks` / `register` / `unregister` / `delete` | "give Kali 4 vCPUs" |
+| `vm_config` | `list` / `show` / `set` / `networks` / `ssh` / `register` / `unregister` / `delete` | "give Kali 4 vCPUs" |
 
 Conventions:
 
@@ -78,6 +79,54 @@ Conventions:
 /vm Kali Linux snap before-upgrade    create a snapshot
 /vm Kali Linux delete confirm         move into the plugin trash (needs permissions.delete)
 ```
+
+## dsh-ssh-vault integration
+
+Once a VM runs sshd, the natural next step is to add it to the SSH vault (`dsh-ssh-vault`). This plugin turns that into "pick the VM → press import → confirm".
+
+**Entry points**
+
+| Entry | What happens |
+| --- | --- |
+| Settings · VM card · "SSH import" | Opens the panel: probes the vault, prepares suggested values, writes on confirm |
+| `vm_config action=ssh vm=<name>` | Returns the proposal (alias / host / user / auth / equivalent command) plus where to click |
+
+Tools deliberately **cannot** write the vault: its ciphertext is encrypted with ssh-vault's own key and no other plugin has a legitimate way to write that file. The model prepares the data and tells you where to confirm.
+
+**Field scope**
+
+| Field | Source |
+| --- | --- |
+| `alias` | The VM name normalised (non-ASCII folded into separators); a `-2` suffix when two VMs collide |
+| `host` | The guest IP reported by VMware Tools; left empty when unavailable |
+| `port` | 22 by default, editable in the panel |
+| `username` | `root` suggested for Linux / BSD guests, empty otherwise |
+| `authType` / `privateKeyPath` / `password` / `passphrase` | Key auth when a default key exists (`~/.ssh/id_ed25519` → `id_ecdsa` → `id_rsa`), password auth otherwise (you type it) |
+| `description` / `tags` | `<VM name> · VMware`, tags `vmware` plus the VM's own tags |
+
+**Not imported**: `sudoPassword`, `bindAddress`, private-key uploads, alias renames. They are either unrelated to the VM or belong to you in the vault's own page — the field list is a fixed allow-list, because sending one extra field means deciding something on the user's behalf.
+
+**Success and failure**
+
+- Success: `Imported into the SSH vault as <alias>` plus a hint that `ssh_run` can use it. An existing alias is an **update**, and the message says so.
+- Failure: ssh-vault's own message is shown verbatim (invalid alias, missing password, unreadable key …). It owns those rules; the local form only pre-checks formats to save a round trip.
+- The panel warns when the alias already exists ("saving overwrites it") and offers a one-press rename.
+
+**When it is missing or unavailable**
+
+The panel probes with `POST ssh-vault/list` (2.5 s timeout):
+
+| Probe result | Behaviour |
+| --- | --- |
+| Route missing (404, or an HTML fallback) | "dsh-ssh-vault was not detected" + install command + the SSH command stays **copyable** for any other client |
+| 401 / 403 | Says the host rejected the request; refresh and retry |
+| Other error | Shows the reason; editing and copying still work |
+
+So an absent sibling locks nothing: power, snapshots, parameters and deletion behave as before, and the import degrades into "the command, already assembled".
+
+**Permissions**: the import follows `permissions.config` — when false the button is disabled with an explanation (writing another plugin's configuration is a config-level action). Probing and copying stay available.
+
+**Security**: the password appears only in the single request to dsh-ssh-vault; this plugin does not persist it, log it, or read the vault back, and it never reuses the VM encryption password as an SSH password.
 
 ## Permissions
 
@@ -190,6 +239,7 @@ The layering rule is simple: a new action puts **argument assembly in `vmrun.js`
 | Environment | Result |
 | --- | --- |
 | Windows 11 · VMware Workstation 17.6 (vmrun 1.17.0) · Node 26 | 7 real VMs: state, spec, NICs, disks, host network table and process sampling all pass |
+| dsh-ssh-vault 2.3.0 (real source, temp vault) | Password and key auth saves, overwrite semantics, alias validation and masked listing all pass |
 | A machine without VMware | Unit / API / client tests pass; the list and tools explain what to install |
 
 macOS (Fusion) and Linux share the same code paths and the `ps` sampler, but have not been exercised on a real Fusion host. If you hit a difference, an issue with the `vmrun` version and output is welcome.
@@ -204,10 +254,13 @@ node test/live.mjs "E:\Virtual Machines"   # explicit search root
 
 The live test never powers, snapshots or deletes anything; it verifies version detection, the real `vmrun list`, real VMX parsing, the host network table and process sampling. The four files divide as follows:
 
-- `test/unit.mjs` — parsing, classification, storage, inventory semantics and permissions (with vmrun replaced by a fake);
+- `test/unit.mjs` — parsing, classification, storage, inventory semantics, permissions and the SSH import suggestions (with vmrun replaced by a fake);
 - `test/api.mjs` — the settings API envelope, trust gate, second permission check and path sourcing;
 - `test/client-smoke.mjs` — runs the `client.js` factory inside `node:vm` and checks the registration wiring plus zh/en dictionary parity;
+- `test/ssh-vault-link.mjs` — loads **dsh-ssh-vault's real source**, starts its vault in a temp dir and submits the payload the panel would submit, verifying field names, alias validation, overwrite semantics and that passwords never come back out;
 - `test/live.mjs` — read-only verification against a real VMware installation.
+
+`ssh-vault-link` needs dsh-ssh-vault cloned next to this repository; when it is absent the test prints a skip line and exits 0, so CI never fails because of a sibling that is not there.
 
 ## License
 

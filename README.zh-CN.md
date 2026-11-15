@@ -20,6 +20,7 @@
 - **模型面向的四个工具** —— `vm_list`、`vm_power`、`vm_snapshot`、`vm_config`，智能体可以按虚拟机名或 vmx 路径操作本机虚拟机。
 - **设置页** —— 卡片式列出台数、规格、实时 CPU/内存占用、网卡与路径，并提供电源、快照、参数与删除按钮。列表按固定间隔自动刷新，页面隐藏时停止。
 - **对话里的 `/vm` 命令** —— 不经过模型直接看状态、开关机、拍快照。
+- **与 dsh-ssh-vault 的联动** —— 选中虚拟机后一键把地址、端口、账号与认证方式导入 SSH 保险库；对方未安装时降级为可复制的命令。见[联动说明](#与-dsh-ssh-vault-的联动)。
 
 它**不会**改变虚拟机的文件布局，也不做磁盘格式转换：所有动作最终都落成一条 `vmrun` 命令，或对 VMX 文本的定点改写。
 
@@ -60,7 +61,7 @@ dsh plugin --profile desktop install .
 | `vm_list` | 列出虚拟机：状态、规格、实时占用、网卡、路径；`vm=` 给单台详情 | 「现在有哪些虚拟机在跑」 |
 | `vm_power` | `start` / `stop` / `suspend` / `pause` / `unpause` / `reset` / `status` | 「把 CentOS 7 关掉」 |
 | `vm_snapshot` | `list` / `create` / `revert` / `delete` | 「给 Ubuntu 拍一个升级前的快照」 |
-| `vm_config` | `list` / `show` / `set` / `networks` / `register` / `unregister` / `delete` | 「把 Kali 的 CPU 调到 4 核」 |
+| `vm_config` | `list` / `show` / `set` / `networks` / `ssh` / `register` / `unregister` / `delete` | 「把 Kali 的 CPU 调到 4 核」 |
 
 约定：
 
@@ -82,6 +83,54 @@ dsh plugin --profile desktop install .
 ```
 
 命令名用 `vm` 而不是 `vmware`，是为了在输入框里少打字；参数里中英文标点都认。
+
+## 与 dsh-ssh-vault 的联动
+
+虚拟机装好 sshd 之后，最顺手的下一步是把它加进 SSH 保险库（`dsh-ssh-vault`）。插件把这一步做成「选中虚拟机 → 点导入 → 确认」。
+
+**触发入口**
+
+| 入口 | 行为 |
+| --- | --- |
+| 设置页 · 虚拟机卡片 ·「SSH 导入」 | 打开导入面板：探测保险库、准备建议值、确认后写入 |
+| `vm_config action=ssh vm=<名字>` | 只给建议（别名 / 地址 / 账号 / 认证 / 等价命令）与入口说明 |
+
+工具刻意**不能**直接写保险库：密文由 dsh-ssh-vault 用自己的密钥加密，其它插件没有正当途径写那个文件。模型能做的是把数据准备好、告诉你点哪里；写入由你在设置页确认。
+
+**导入的字段范围**
+
+| 字段 | 来源 |
+| --- | --- |
+| `alias` | 虚拟机名规范化（非 ASCII 折成分隔符）；同批虚拟机重名时自动加 `-2` |
+| `host` | VMware Tools 报告的客户机 IP；取不到就留空由你填 |
+| `port` | 默认 22，可在面板里改 |
+| `username` | Linux / BSD 客户机建议 `root`，其它留空 |
+| `authType` / `privateKeyPath` / `password` / `passphrase` | 存在默认私钥（`~/.ssh/id_ed25519` → `id_ecdsa` → `id_rsa`）就用私钥认证，否则选口令认证，由你输入 |
+| `description` / `tags` | `<虚拟机名> · VMware`，标签为 `vmware` + 虚拟机自身的标签 |
+
+**不导入的字段**：`sudoPassword`、`bindAddress`、私钥文件上传、别名改名。这些要么与虚拟机无关，要么需要你在保险库页面里自己决定——字段范围固定在一个白名单里，多传一个字段就等于替用户做了他没同意的决定。
+
+**成功与失败**
+
+- 成功：`已导入到 SSH 保险库：<别名>`，并提示之后可以用 `ssh_run` 的别名执行命令。同名主机存在时是**更新**，提示会写明「已更新」。
+- 失败：原样显示 dsh-ssh-vault 的报错（别名字符非法、缺口令、私钥不可读……），判定权在对方；本地只做格式预检，省一次往返。
+- 面板提前警告「保险库里已有同名主机，保存会覆盖」，并给一个「换一个别名」按钮。
+
+**未安装 / 不可用时**
+
+面板打开时先 `POST ssh-vault/list` 探测（2.5 秒超时）：
+
+| 探测结果 | 表现 |
+| --- | --- |
+| 路由不存在（404，或返回 HTML fallback） | 「未检测到 dsh-ssh-vault」+ 安装命令 + **仍然可复制** SSH 命令，手工加进任何 SSH 客户端 |
+| 401 / 403 | 提示宿主拒绝了这次请求，刷新后重试 |
+| 其它错误 | 显示具体原因；编辑与复制不受影响 |
+
+也就是说，联动缺席时**没有任何功能被锁死**：电源、快照、参数、删除照常，导入退化成「帮你把命令拼好」。
+
+**权限**：导入受 `permissions.config` 影响——为 `false` 时面板里的导入按钮禁用并说明原因（写另一个插件的配置属于 config 级操作）。探测与复制不受影响。
+
+**安全**：口令只出现在提交给 dsh-ssh-vault 的那一次请求里，本插件不落盘、不写日志、也不回读保险库；不会把虚拟机的加密口令当作 SSH 口令复用。
 
 ## 权限模型
 
@@ -194,6 +243,7 @@ vmrun 的报错是英文散文，同一句 `Cannot open VM` 既可能是路径�
 | 环境 | 结果 |
 | --- | --- |
 | Windows 11 · VMware Workstation 17.6（vmrun 1.17.0）· Node 26 | 7 台真实虚拟机：状态、规格、网卡、磁盘、网络表、进程采集全部通过 |
+| dsh-ssh-vault 2.3.0（真实源码，临时保险库） | 口令 / 私钥两种认证的保存、覆盖语义、别名校验、列表脱敏全部通过 |
 | 无 VMware 的机器 | 单元 / 接口 / 客户端测试全部通过；列表与工具给出「找不到 vmrun」的引导 |
 
 macOS（Fusion）与 Linux 走同一套代码路径与 `ps` 采集，但未在真实 Fusion 主机上跑过；如果你遇到了差异，欢迎提 issue 并附上 `vmrun` 的版本与输出。
@@ -208,10 +258,13 @@ node test/live.mjs "E:\Virtual Machines"   # 指定搜索目录
 
 联调测试**不**会开关机、拍快照或删除任何东西；它验证版探测、真实 `vmrun list`、真实 VMX 解析、网络表与进程占用采集。四个测试文件的分工是：
 
-- `test/unit.mjs` —— 解析、归类、存储、库存语义与权限（把 vmrun 换成假对象）；
+- `test/unit.mjs` —— 解析、归类、存储、库存语义、权限与 SSH 导入的建议值（把 vmrun 换成假对象）；
 - `test/api.mjs` —— 设置接口的信封、信任栅栏、权限二次判定与路径来源；
 - `test/client-smoke.mjs` —— 在 `node:vm` 里跑 `client.js` 的工厂，检查注册接线与中英文案双向一致；
+- `test/ssh-vault-link.mjs` —— 加载 **dsh-ssh-vault 的真实源码**，把我们的 payload 提交给它的保存接口，验证字段名、别名校验、覆盖语义与口令不外泄；
 - `test/live.mjs` —— 对着真实 VMware 的只读联调。
+
+`ssh-vault-link` 需要把 dsh-ssh-vault 克隆在本仓库旁边；找不到就打印一行 skip 并退出 0，因此 CI 里不会因为它缺席而失败。
 
 ## 许可
 

@@ -30,6 +30,16 @@ import {
 } from '../lib/vmrun.js'
 import { guestFamilyOf, infoFromEntries, parseVmx, quote, readVmx, writeVmx, writeVmxText } from '../lib/vmx.js'
 import { renderList, stateLabel } from '../lib/format.js'
+import {
+  SSH_VAULT_SAVE_FIELDS,
+  aliasFor,
+  buildSshPlan,
+  detectDefaultKey,
+  renderSshPlan,
+  suggestAlias,
+  suggestUsername,
+  uniqueAlias,
+} from '../lib/ssh-import.js'
 import * as plugin from '../index.js'
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
@@ -683,6 +693,126 @@ await test('renderList 输出状态词、规格与警告', async () => {
   await rm(dataDir, { recursive: true, force: true })
 })
 
+// —— 与 dsh-ssh-vault 的联动 ——
+
+/** 一台 Linux 虚拟机的视图（只保留导入用到的字段）。 */
+const SSH_ENTRY = {
+  name: 'Kali Linux',
+  vmx: 'E:\\VMs\\kali\\kali.vmx',
+  guestFamily: 'linux',
+  tags: ['lab', 'vmware'],
+}
+
+await test('suggestAlias 压出 ssh-vault 认可的别名且结果稳定', () => {
+  assert.equal(suggestAlias('Kali Linux', '/x.vmx'), 'kali-linux')
+  // 中文前缀被折成分隔符，剩下的 ASCII 部分保留
+  assert.equal(suggestAlias('软件安全kali Linux', '/x.vmx'), 'kali-linux')
+  assert.equal(suggestAlias('  --Weird__Name.. ', '/x.vmx'), 'weird__name')
+  const fallback = suggestAlias('测试机', '/a/b.vmx')
+  assert.match(fallback, /^vm-[a-z0-9]{6}$/)
+  assert.equal(fallback, suggestAlias('测试机', '/a/b.vmx'), '同一路径应得到同一别名')
+  assert.notEqual(fallback, suggestAlias('测试机', '/other.vmx'))
+  assert.ok(suggestAlias('x'.repeat(80), '/a.vmx').length <= 40)
+})
+
+await test('uniqueAlias / aliasFor 让同批虚拟机的别名不撞车', () => {
+  assert.equal(uniqueAlias('kali', []), 'kali')
+  assert.equal(uniqueAlias('kali', ['KALI']), 'kali-2')
+  assert.equal(uniqueAlias('kali', ['kali', 'kali-2']), 'kali-3')
+
+  const entries = [
+    { name: 'Kali Linux', vmx: 'E:\\a\\kali.vmx' },
+    { name: '软件安全kali Linux', vmx: 'E:\\b\\kali2.vmx' },
+  ]
+  // 两个名字压出同一个别名，第二台必须自动让位
+  assert.equal(aliasFor(entries[0], entries), 'kali-linux')
+  assert.equal(aliasFor(entries[1], entries), 'kali-linux-2')
+  // 自己不算冲突
+  assert.equal(aliasFor(entries[0], [entries[0]]), 'kali-linux')
+})
+
+await test('suggestUsername 只对 Linux/BSD 猜 root', () => {
+  assert.equal(suggestUsername('linux'), 'root')
+  assert.equal(suggestUsername('bsd'), 'root')
+  assert.equal(suggestUsername('windows'), '')
+  assert.equal(suggestUsername('macos'), '')
+  assert.equal(suggestUsername('other'), '')
+})
+
+await test('buildSshPlan 组装地址、账号、标签与等价命令', () => {
+  const plan = buildSshPlan(SSH_ENTRY, {
+    host: '192.168.234.129',
+    guest: { attempted: true, ok: true, ip: '192.168.234.129' },
+    defaultKeyPath: null,
+  })
+  assert.equal(plan.alias, 'kali-linux')
+  assert.equal(plan.host, '192.168.234.129')
+  assert.equal(plan.port, 22)
+  assert.equal(plan.username, 'root')
+  assert.equal(plan.authType, 'password')
+  assert.deepEqual(plan.tags, ['vmware', 'lab'])
+  assert.equal(plan.sshCommand, 'ssh root@192.168.234.129')
+  assert.ok(plan.description.includes('Kali Linux'))
+  assert.deepEqual(plan.warnings, ['need-password'])
+  assert.equal(plan.importAllowed, true)
+})
+
+await test('buildSshPlan 缺地址/账号时给出警告而不是编一个值', () => {
+  const plan = buildSshPlan({ name: 'Windows 10', vmx: 'E:\\VMs\\win\\win.vmx', guestFamily: 'windows', tags: [] }, { defaultKeyPath: '' })
+  assert.equal(plan.host, '')
+  assert.equal(plan.username, '')
+  assert.equal(plan.authType, 'password')
+  assert.deepEqual(plan.warnings, ['no-host', 'no-username', 'need-password'])
+  assert.equal(plan.sshCommand, '')
+  assert.deepEqual(plan.tags, ['vmware'])
+})
+
+await test('buildSshPlan 有默认私钥时选私钥认证并带上路径', () => {
+  const keyPath = path.join('C:', 'Users', 'me', '.ssh', 'id_ed25519')
+  const plan = buildSshPlan(SSH_ENTRY, { host: '10.0.0.5', defaultKeyPath: keyPath, importAllowed: false })
+  assert.equal(plan.authType, 'key')
+  assert.equal(plan.privateKeyPath, keyPath)
+  assert.deepEqual(plan.warnings, [])
+  assert.equal(plan.sshCommand, 'ssh root@10.0.0.5')
+  assert.equal(plan.importAllowed, false)
+})
+
+await test('detectDefaultKey 按 ed25519 → ecdsa → rsa 的顺序找', async () => {
+  const dir = await tempDir('ssh-keydir')
+  assert.equal(detectDefaultKey({ sshDir: dir }), '')
+  await writeFile(path.join(dir, 'id_rsa'), 'x', 'utf8')
+  assert.equal(detectDefaultKey({ sshDir: dir }), path.join(dir, 'id_rsa'))
+  await writeFile(path.join(dir, 'id_ed25519'), 'x', 'utf8')
+  assert.equal(detectDefaultKey({ sshDir: dir }), path.join(dir, 'id_ed25519'))
+  await rm(dir, { recursive: true, force: true })
+})
+
+await test('renderSshPlan 说清地址来源、命令与导入入口', () => {
+  const plan = buildSshPlan(SSH_ENTRY, { host: '10.0.0.5', guest: { attempted: true, ok: true }, defaultKeyPath: '/home/me/.ssh/id_rsa' })
+  const text = renderSshPlan(plan)
+  assert.ok(text.includes('kali-linux'))
+  assert.ok(text.includes('10.0.0.5'))
+  assert.ok(text.includes('ssh root@10.0.0.5'))
+  assert.ok(/设置|Settings/.test(text), '应告诉用户导入入口在设置页')
+
+  const bare = buildSshPlan({ name: 'Box', vmx: '/box.vmx', guestFamily: 'other', tags: [] }, { defaultKeyPath: '' })
+  const missing = renderSshPlan(bare)
+  assert.ok(/未知|unknown/i.test(missing))
+  assert.ok(/没有任何地址|without a host|地址/.test(missing))
+})
+
+await test('导入字段集合与 ssh-vault 的 save 契约逐字一致', async () => {
+  const expected = ['alias', 'host', 'port', 'username', 'shell', 'description', 'tags', 'authType', 'password', 'privateKeyPath', 'passphrase']
+  assert.deepEqual([...SSH_VAULT_SAVE_FIELDS].sort(), expected.slice().sort())
+
+  // 界面是真正提交的那一端，字段名单必须与 Host 侧完全一致，否则「导入」会静默丢掉字段。
+  const source = await readFile(path.join(ROOT, 'client.js'), 'utf8')
+  const match = /const SSH_SAVE_FIELDS = \[([^\]]+)\]/.exec(source)
+  assert.ok(match !== null, 'client.js 应声明 SSH_SAVE_FIELDS')
+  const clientFields = [...match[1].matchAll(/'([^']+)'/g)].map((item) => item[1])
+  assert.deepEqual(clientFields.slice().sort(), [...SSH_VAULT_SAVE_FIELDS].sort())
+})
+
 // —— 文案 ——
 
 await test('每条文案都有中英两份非空文本', () => {
@@ -695,7 +825,7 @@ await test('每条文案都有中英两份非空文本', () => {
   }
 })
 
-const HOST_SOURCES = ['index.js', 'lib/vmrun.js', 'lib/inventory.js', 'lib/format.js', 'lib/store.js', 'lib/vm-api.js', 'lib/platform.js']
+const HOST_SOURCES = ['index.js', 'lib/vmrun.js', 'lib/inventory.js', 'lib/format.js', 'lib/store.js', 'lib/vm-api.js', 'lib/platform.js', 'lib/ssh-import.js']
 
 /**
  * 读一遍 Host 侧源码，收集所有 `t('key')` 形式引用到的文案键。

@@ -151,6 +151,47 @@ window.__ModuleLoader__.load({
         diagEmpty: '暂无日志记录。',
         diagHint: '加密口令不会写进日志：形如 -vp <口令> 的内容会被替换成 ***。',
         diagBusy: '处理中…',
+        sshImport: 'SSH 导入',
+        sshPanelTitle: '导入到 SSH 保险库',
+        sshPanelIntro: '把这台虚拟机的地址、端口、账号与认证方式整理成一条 dsh-ssh-vault 记录。口令只提交给它，本插件不保存，也不复用虚拟机的加密口令。',
+        sshChecking: '正在检查 dsh-ssh-vault…',
+        sshAvailable: 'dsh-ssh-vault {version} · 已有 {count} 台主机',
+        sshUnavailableTitle: '未检测到 dsh-ssh-vault',
+        sshUnavailableHint: '安装后重启 DSH，这里就会变成可导入：dsh plugin --profile desktop install dsh-ssh-vault',
+        sshUnavailableDegrade: '现在仍可复制下面的 SSH 命令，手工加进保险库或其它 SSH 客户端。',
+        sshDenied: 'SSH 保险库路由存在，但宿主拒绝了这次请求（未认证）。刷新页面后重试。',
+        sshProbeError: '无法与 SSH 保险库通信：{detail}',
+        sshAlias: '别名',
+        sshHost: '主机地址',
+        sshPort: '端口',
+        sshUsername: '登录账号',
+        sshAuthType: '认证方式',
+        sshAuthKey: '私钥',
+        sshAuthPassword: '口令',
+        sshKeyPath: '私钥路径',
+        sshKeyPassphrase: '私钥口令（可选）',
+        sshDescription: '说明',
+        sshTags: '标签（逗号分隔）',
+        sshAliasTaken: '保险库里已有同名主机「{alias}」，保存会覆盖它的地址与凭据。',
+        sshRename: '换一个别名',
+        sshGuestHint: '地址取自 VMware Tools 报告的客户机 IP；取不到就手工填写。',
+        sshGuestFetched: '已从 VMware Tools 取到客户机 IP。',
+        sshNeedHost: '请填写主机地址。',
+        sshNeedUser: '请填写登录账号。',
+        sshNeedPassword: '请填写口令。',
+        sshNeedKey: '请填写私钥路径。',
+        sshNeedAlias: '别名只能包含字母、数字、点、下划线与连字符。',
+        sshNeedPort: '端口必须是 1 到 65535 之间的整数。',
+        sshSave: '导入',
+        sshSaving: '导入中…',
+        sshSaveDone: '已导入到 SSH 保险库：{alias}。之后智能体可以用 ssh_run 的 alias 直接执行命令。',
+        sshSaveUpdated: '已更新 SSH 保险库里的同名主机：{alias}。',
+        sshSaveFailed: '导入失败：{message}',
+        sshCopy: '复制 SSH 命令',
+        sshCopied: '已复制',
+        sshCopyFailed: '复制失败，请手动选中文本。',
+        sshCommandLabel: 'SSH 命令',
+        sshPermissionOff: '插件配置关闭了 permissions.config，导入按钮不可用。',
         dockHint: '虚拟机状态：发送第一条消息后并入对话记录',
         running: '执行中…',
         noOutput: '（无输出）',
@@ -284,6 +325,47 @@ window.__ModuleLoader__.load({
         diagEmpty: 'No entries yet.',
         diagHint: 'Encryption passwords are never logged: anything shaped like -vp <password> becomes ***.',
         diagBusy: 'Working…',
+        sshImport: 'SSH import',
+        sshPanelTitle: 'Import into the SSH vault',
+        sshPanelIntro: 'Turns this VM into one dsh-ssh-vault entry: address, port, user and auth. The password is submitted to the vault only; this plugin never stores it and never reuses the VM encryption password.',
+        sshChecking: 'Checking for dsh-ssh-vault…',
+        sshAvailable: 'dsh-ssh-vault {version} · {count} hosts',
+        sshUnavailableTitle: 'dsh-ssh-vault was not detected',
+        sshUnavailableHint: 'Install it and restart DSH to enable the import: dsh plugin --profile desktop install dsh-ssh-vault',
+        sshUnavailableDegrade: 'You can still copy the SSH command below and add the host by hand, in the vault or any other SSH client.',
+        sshDenied: 'The vault route exists but the host rejected this request (not authenticated). Refresh the page and try again.',
+        sshProbeError: 'Cannot reach the SSH vault: {detail}',
+        sshAlias: 'Alias',
+        sshHost: 'Host',
+        sshPort: 'Port',
+        sshUsername: 'User',
+        sshAuthType: 'Auth',
+        sshAuthKey: 'private key',
+        sshAuthPassword: 'password',
+        sshKeyPath: 'Key path',
+        sshKeyPassphrase: 'Key passphrase (optional)',
+        sshDescription: 'Description',
+        sshTags: 'Tags (comma separated)',
+        sshAliasTaken: 'The vault already has a host named "{alias}"; saving overwrites its address and credentials.',
+        sshRename: 'Use another alias',
+        sshGuestHint: 'The address comes from the guest IP reported by VMware Tools; type it if that is unavailable.',
+        sshGuestFetched: 'Guest IP taken from VMware Tools.',
+        sshNeedHost: 'A host address is required.',
+        sshNeedUser: 'A user is required.',
+        sshNeedPassword: 'A password is required.',
+        sshNeedKey: 'A private key path is required.',
+        sshNeedAlias: 'An alias may only contain letters, digits, dots, underscores and hyphens.',
+        sshNeedPort: 'The port must be an integer between 1 and 65535.',
+        sshSave: 'Import',
+        sshSaving: 'Importing…',
+        sshSaveDone: 'Imported into the SSH vault as {alias}. The agent can run ssh_run with that alias now.',
+        sshSaveUpdated: 'Updated the existing vault host {alias}.',
+        sshSaveFailed: 'Import failed: {message}',
+        sshCopy: 'Copy SSH command',
+        sshCopied: 'Copied',
+        sshCopyFailed: 'Copy failed; select the text manually.',
+        sshCommandLabel: 'SSH command',
+        sshPermissionOff: 'permissions.config is false, so the import button is disabled.',
         dockHint: 'VM state: it moves into the transcript after your first message',
         running: 'Running…',
         noOutput: 'No output',
@@ -463,6 +545,69 @@ window.__ModuleLoader__.load({
         return { ok: false, error: message }
       } catch {
         return { ok: false, error: t('transportError') }
+      }
+    }
+
+    /**
+     * 提交给 dsh-ssh-vault 的字段集合。
+     *
+     * 必须与 `lib/ssh-import.js` 的 `SSH_VAULT_SAVE_FIELDS` 保持一致——测试会比对两处。
+     * 只发这里列出的键，是为了让「导入」这件事的字段范围有一个可审计的边界：多传一个
+     * `sudoPassword` 之类的字段，就等于替用户做了他没同意的决定。
+     */
+    const SSH_SAVE_FIELDS = ['alias', 'host', 'port', 'username', 'shell', 'description', 'tags', 'authType', 'password', 'privateKeyPath', 'passphrase']
+
+    /**
+     * 调一次**另一个插件**的接口。
+     *
+     * dsh-ssh-vault 的保险库由它自己加密，密文只认它自己的密钥，所以写入必须走它的
+     * `ssh-vault/save`。请求发自同一个页面：同源、自动带上会话 cookie，因此与它设置页
+     * 里的保存是同一权限级别，区别只是表单由我们这边渲染。
+     *
+     * 三种失败必须分开，因为处置方式不同：
+     * - `missing` —— 路由不存在（插件没装）：降级为「复制命令」；
+     * - `denied` —— 路由在但请求没被信任：让用户刷新；
+     * - `error` —— 对方给出了具体错误（例如别名字符非法）：原样透传它的措辞，那才是
+     *   用户需要看的话。
+     *
+     * @param action - 路由末段，如 `save`。
+     * @param payload - JSON 请求体。
+     * @param options - 超时。
+     * @returns `{ state: 'ok', value }` / `{ state: 'missing' }` / `{ state: 'denied' }` / `{ state: 'error', detail }`。
+     */
+    async function callSshVault(action, payload, { timeoutMs = 4000 } = {}) {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), timeoutMs)
+      try {
+        const response = await fetch(`ssh-vault/${action}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload ?? {}),
+          signal: controller.signal,
+        })
+        if (response.status === 404) return { state: 'missing' }
+        if (response.status === 401 || response.status === 403) return { state: 'denied' }
+        // 路由没注册时，Web 服务器可能用前端 fallback 回一份 200 的 HTML；按内容类型识破它。
+        const type = String(response.headers.get('content-type') ?? '')
+        if (!type.includes('application/json')) return { state: 'missing' }
+        if (!response.ok) return { state: 'error', detail: `HTTP ${response.status}` }
+        let envelope
+        try {
+          envelope = await response.json()
+        } catch {
+          return { state: 'missing' }
+        }
+        if (envelope !== null && typeof envelope === 'object' && envelope.ok === true) {
+          return { state: 'ok', value: envelope.value }
+        }
+        return { state: 'error', detail: envelope?.error?.message ?? '' }
+      } catch (error) {
+        return {
+          state: 'error',
+          detail: error?.name === 'AbortError' ? 'timeout' : String(error?.message ?? error),
+        }
+      } finally {
+        clearTimeout(timer)
       }
     }
 
@@ -860,6 +1005,242 @@ window.__ModuleLoader__.load({
         error.length > 0 ? h('div', { style: S.error }, error) : null)
     }
 
+    /**
+     * SSH 导入面板：把一台虚拟机接进 dsh-ssh-vault。
+     *
+     * 三件事同时发生，各自的节奏不同，所以必须分别呈现：
+     * 1. **探测对方**（`ssh-vault/list`）：决定导入按钮能不能用；
+     * 2. **准备数据**（本插件 `sshPlan`）：给出建议值，必要时问一次 VMware Tools 要客户机 IP；
+     * 3. **提交**（`ssh-vault/save`）：只有在用户确认后才发生，口令只在这条请求里出现一次。
+     *
+     * 降级不是「把按钮变灰就完事」：探测失败时命令仍然可以复制，配置过程不会因为另一个
+     * 插件缺席而卡死。
+     */
+    function SshImportPanel(props) {
+      const t = useT()
+      const entry = props.entry
+      const [vault, setVault] = useState({ state: 'checking', version: '', hosts: [], detail: '' })
+      const [plan, setPlan] = useState(null)
+      const [form, setForm] = useState(null)
+      const [error, setError] = useState('')
+      const [done, setDone] = useState('')
+      const [busy, setBusy] = useState(false)
+      const [copied, setCopied] = useState(false)
+
+      const probe = useCallback(async () => {
+        const result = await callSshVault('list', {}, { timeoutMs: 2500 })
+        if (result.state === 'ok') {
+          const hosts = Array.isArray(result.value?.hosts) ? result.value.hosts : []
+          setVault({ state: 'ready', version: String(result.value?.version ?? ''), hosts, detail: '' })
+        } else {
+          setVault({ state: result.state, version: '', hosts: [], detail: result.detail ?? '' })
+        }
+      }, [])
+
+      const loadPlan = useCallback(async () => {
+        const result = await call('sshPlan', { id: entry.id, host: props.knownHost ?? '' }, t)
+        if (!result.ok) {
+          setError(result.error)
+          return
+        }
+        const next = result.value.plan
+        setPlan(next)
+        setForm({
+          alias: next.alias,
+          host: next.host,
+          port: String(next.port),
+          username: next.username,
+          authType: next.authType,
+          privateKeyPath: next.privateKeyPath,
+          password: '',
+          passphrase: '',
+          description: next.description,
+          tags: next.tags.join(', '),
+        })
+      }, [entry.id, props.knownHost])
+
+      useEffect(() => {
+        probe()
+        loadPlan()
+      }, [probe, loadPlan])
+
+      const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+
+      /** 表单校验：错误消息用文案键，渲染时才翻译。 */
+      const validate = () => {
+        if (form === null) return 'sshChecking'
+        const alias = form.alias.trim()
+        if (alias.length === 0 || !/^[A-Za-z0-9._-]+$/.test(alias)) return 'sshNeedAlias'
+        const port = Number(form.port)
+        if (!Number.isInteger(port) || port < 1 || port > 65535) return 'sshNeedPort'
+        if (form.host.trim().length === 0) return 'sshNeedHost'
+        if (form.username.trim().length === 0) return 'sshNeedUser'
+        if (form.authType === 'key' && form.privateKeyPath.trim().length === 0) return 'sshNeedKey'
+        if (form.authType !== 'key' && form.password.length === 0) return 'sshNeedPassword'
+        return ''
+      }
+
+      const submit = async () => {
+        setError('')
+        setDone('')
+        const problem = validate()
+        if (problem.length > 0) {
+          setError(t(problem))
+          return
+        }
+        const draft = {
+          alias: form.alias.trim(),
+          host: form.host.trim(),
+          port: Number(form.port),
+          username: form.username.trim(),
+          shell: 'bash',
+          description: form.description,
+          tags: form.tags.split(',').map((tag) => tag.trim()).filter((tag) => tag.length > 0),
+          authType: form.authType,
+        }
+        if (form.authType === 'key') {
+          draft.privateKeyPath = form.privateKeyPath.trim()
+          if (form.passphrase.length > 0) draft.passphrase = form.passphrase
+        } else {
+          draft.password = form.password
+        }
+        // 只发白名单里的键：认证方式二选一，另一个字段不该跟着过去（哪怕是空串）。
+        const payload = {}
+        for (const field of SSH_SAVE_FIELDS) {
+          if (draft[field] !== undefined) payload[field] = draft[field]
+        }
+        setBusy(true)
+        // 保存走对方的路由：本地校验只是省一次往返，真正的判定（别名校验、覆盖、加密）
+        // 都在 ssh-vault 里，所以它返回的错误要原样显示。
+        const result = await callSshVault('save', payload, { timeoutMs: 15000 })
+        setBusy(false)
+        if (result.state === 'ok') {
+          const created = result.value?.created === true
+          setDone(t(created ? 'sshSaveDone' : 'sshSaveUpdated', { alias: result.value?.alias ?? payload.alias }))
+          await probe()
+          return
+        }
+        if (result.state === 'missing') {
+          setError(t('sshUnavailableTitle'))
+          return
+        }
+        if (result.state === 'denied') {
+          setError(t('sshDenied'))
+          return
+        }
+        setError(result.detail.length > 0 ? t('sshSaveFailed', { message: result.detail }) : t('sshProbeError', { detail: '—' }))
+      }
+
+      const copyCommand = async () => {
+        const command = commandText()
+        if (command.length === 0) return
+        try {
+          await navigator.clipboard.writeText(command)
+          setCopied(true)
+        } catch {
+          setError(t('sshCopyFailed'))
+        }
+      }
+
+      /** 当前表单对应的等价 ssh 命令（地址为空时退回计划里的那条）。 */
+      const commandText = () => {
+        if (form !== null && form.host.trim().length > 0) {
+          const port = Number(form.port) || 22
+          const user = form.username.trim()
+          return `ssh${port === 22 ? '' : ` -p ${port}`} ${user.length > 0 ? `${user}@` : ''}${form.host.trim()}`
+        }
+        return plan?.sshCommand ?? ''
+      }
+
+      const aliasTaken = form !== null && vault.state === 'ready'
+        ? vault.hosts.some((host) => String(host.alias).toLowerCase() === form.alias.trim().toLowerCase())
+        : false
+      const canImport = vault.state === 'ready' && plan !== null && plan.importAllowed !== false && busy !== true
+
+      const vaultBadge = vault.state === 'ready'
+        ? h('span', { style: S.badge }, t('sshAvailable', { version: vault.version.length > 0 ? vault.version : '—', count: vault.hosts.length }))
+        : vault.state === 'checking'
+          ? h('span', { style: S.badge }, t('sshChecking'))
+          : h('span', { style: S.badgeBad }, t('sshUnavailableTitle'))
+
+      const unavailable = vault.state === 'ready' || vault.state === 'checking'
+        ? null
+        : h('div', { style: S.hint },
+          vault.state === 'missing'
+            ? `${t('sshUnavailableHint')}　${t('sshUnavailableDegrade')}`
+            : vault.state === 'denied'
+              ? t('sshDenied')
+              : t('sshProbeError', { detail: vault.detail.length > 0 ? vault.detail : '—' }))
+
+      return h('div', { style: S.form },
+        h('div', { style: S.cardHead },
+          h('span', { style: S.name }, t('sshPanelTitle')),
+          vaultBadge),
+        h('div', { style: S.hint }, t('sshPanelIntro')),
+        unavailable,
+        plan !== null && plan.importAllowed === false
+          ? h('div', { style: S.badgeBad }, t('sshPermissionOff'))
+          : null,
+        form === null
+          ? h('div', { style: S.hint }, t('sshChecking'))
+          : h('div', null,
+            h('div', { style: S.fields },
+              h(Field, { label: t('sshAlias') },
+                h('input', { style: S.input, value: form.alias, onChange: update('alias') })),
+              h(Field, { label: t('sshHost'), hint: plan?.guest?.attempted === true && plan?.guest?.ok === true ? t('sshGuestFetched') : t('sshGuestHint') },
+                h('input', { style: S.input, value: form.host, onChange: update('host') })),
+              h(Field, { label: t('sshPort') },
+                h('input', { style: S.input, value: form.port, inputMode: 'numeric', onChange: update('port') })),
+              h(Field, { label: t('sshUsername') },
+                h('input', { style: S.input, value: form.username, onChange: update('username') })),
+              h(Field, { label: t('sshAuthType') },
+                h('select', { style: S.input, value: form.authType, onChange: update('authType') },
+                  h('option', { value: 'key' }, t('sshAuthKey')),
+                  h('option', { value: 'password' }, t('sshAuthPassword')))),
+              form.authType === 'key'
+                ? h(Field, { label: t('sshKeyPath') },
+                  h('input', { style: S.input, value: form.privateKeyPath, onChange: update('privateKeyPath') }))
+                : h(Field, { label: t('sshAuthPassword') },
+                  h('input', { style: S.input, type: 'password', value: form.password, onChange: update('password') }))),
+            form.authType === 'key'
+              ? h('div', { style: S.fields },
+                h(Field, { label: t('sshKeyPassphrase') },
+                  h('input', { style: S.input, type: 'password', value: form.passphrase, onChange: update('passphrase') })))
+              : null,
+            h('div', { style: S.fields },
+              h(Field, { label: t('sshDescription') },
+                h('input', { style: S.input, value: form.description, onChange: update('description') })),
+              h(Field, { label: t('sshTags') },
+                h('input', { style: S.input, value: form.tags, onChange: update('tags') }))),
+            aliasTaken
+              ? h('div', { style: S.row },
+                h('span', { style: S.hint }, t('sshAliasTaken', { alias: form.alias })),
+                h('button', {
+                  style: S.miniButton,
+                  onClick: () => setForm((current) => ({ ...current, alias: `${current.alias.trim()}-2` })),
+                }, t('sshRename')))
+              : null,
+            h('div', { style: S.kv },
+              h('span', { style: S.label }, t('sshCommandLabel')),
+              h('span', { style: { ...S.metaPath, flex: '1 1 auto' }, title: commandText() }, commandText().length > 0 ? commandText() : '—')),
+            h('div', { style: S.row },
+              h('button', {
+                'data-variant': 'primary',
+                style: { ...S.button, ...S.primary },
+                disabled: canImport !== true,
+                title: plan?.importAllowed === false ? t('sshPermissionOff') : t('sshSave'),
+                onClick: submit,
+              }, busy ? t('sshSaving') : t('sshSave')),
+              h('button', {
+                style: S.button,
+                disabled: commandText().length === 0,
+                onClick: copyCommand,
+              }, copied ? t('sshCopied') : t('sshCopy')),
+              h('button', { style: S.button, disabled: busy, onClick: props.onClose }, t('cancel')))),
+        done.length > 0 ? h('div', { style: S.okText }, done) : null,
+        error.length > 0 ? h('div', { style: S.error }, error) : null)
+    }
+
     /** 设置页主体。 */
     function VmControlSettings() {
       const t = useT()
@@ -1241,6 +1622,12 @@ window.__ModuleLoader__.load({
               h('button', {
                 style: S.button,
                 disabled: vm.missing,
+                title: permissions.config === true ? t('sshPanelIntro') : t('sshPermissionOff'),
+                onClick: () => setPanel(isPanel && panel.kind === 'ssh' ? null : { id: vm.id, kind: 'ssh' }),
+              }, t('sshImport')),
+              h('button', {
+                style: S.button,
+                disabled: vm.missing,
                 onClick: () => act('open', 'openFolder', { id: vm.id }, vm.id, t('opened')),
               }, t('openFolder')),
               h('button', {
@@ -1271,6 +1658,13 @@ window.__ModuleLoader__.load({
                 setNotice({ id: vm.id, kind: 'ok', text: message })
                 load({ refresh: true })
               },
+            })
+            : null,
+          isPanel && panel.kind === 'ssh'
+            ? h(SshImportPanel, {
+              entry: vm,
+              knownHost: guests[vm.id]?.ip ?? '',
+              onClose: () => setPanel(null),
             })
             : null,
           isPanel && panel.kind === 'remove'
