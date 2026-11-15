@@ -4,6 +4,14 @@ All notable changes to this plugin are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-11-15
+
+### Changed
+
+- Added the npm publishing metadata: `main`, `author`, `publishConfig` (public access + official registry), a `prepublishOnly` guard and a `publish:npm` shortcut.
+- Added `PUBLISHING.md` / `PUBLISHING.zh-CN.md`: the full path from field configuration and packing checks to publishing, verification, version bumps and common errors.
+- **No functional changes**; this release only touches packaging metadata and docs, and 1.1.0 behaviour is unchanged.
+
 ## [1.1.0] - 2026-11-15
 
 ### Added

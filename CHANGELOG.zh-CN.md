@@ -3,6 +3,14 @@
 本文件记录本插件所有值得注意的改动。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.1.1] - 2026-11-15
+
+### 变更
+
+- 补齐 npm 发布所需的元数据：`main`、`author`、`publishConfig`（公开访问 + 官方 registry）、`prepublishOnly` 守卫，以及 `publish:npm` 快捷脚本。
+- 新增 `PUBLISHING.md` / `PUBLISHING.zh-CN.md`：从字段配置、打包校验到发布、验证、版本更新与常见错误的完整流程。
+- 本版**没有功能改动**，仅打包元数据与文档；1.1.0 的行为完全不变。
+
 ## [1.1.0] - 2026-11-15
 
 ### 新增

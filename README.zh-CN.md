@@ -6,10 +6,11 @@
 
 **DeepSeek Harness 的 VMware 虚拟机管理插件：电源、快照、实时占用、网络配置与 VMX 参数，一处管完。**
 
+[![npm](https://img.shields.io/npm/v/dsh-vm-control.svg)](https://www.npmjs.com/package/dsh-vm-control)
 [![tests](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml/badge.svg)](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[更新日志](CHANGELOG.zh-CN.md) · [安全说明](SECURITY.zh-CN.md)
+[更新日志](CHANGELOG.zh-CN.md) · [安全说明](SECURITY.zh-CN.md) · [发布到 npm](PUBLISHING.zh-CN.md)
 
 </div>
 
@@ -38,14 +39,19 @@
 ## 安装
 
 ```bash
-# 已发布到 npm 时
+# 作为 DSH 插件安装（从 npm 官方仓库拉取）
 dsh plugin --profile desktop install dsh-vm-control
 
-# 或在插件目录里从本地安装
+# 只作为 npm 包使用
+npm install dsh-vm-control
+
+# 在插件目录里从本地安装（开发用）
 dsh plugin --profile desktop install .
 ```
 
 安装后**重启 DSH**：Host 侧工具与设置路由在启动时加载。
+
+发布流程（字段配置、打包校验、账号与 2FA、常见错误）见 [PUBLISHING.zh-CN.md](PUBLISHING.zh-CN.md)。
 
 ## 快速开始
 

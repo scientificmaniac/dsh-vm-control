@@ -6,10 +6,11 @@
 
 **VMware VM management for the DeepSeek Harness: power, snapshots, live resource use, network layout and VMX parameters in one place.**
 
+[![npm](https://img.shields.io/npm/v/dsh-vm-control.svg)](https://www.npmjs.com/package/dsh-vm-control)
 [![tests](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml/badge.svg)](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[Changelog](CHANGELOG.md) · [Security](SECURITY.md)
+[Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Publishing](PUBLISHING.md)
 
 </div>
 
@@ -38,12 +39,19 @@ It never changes the VM file layout and never converts disks: every action becom
 ## Install
 
 ```bash
+# install as a DSH plugin (pulled from the official npm registry)
 dsh plugin --profile desktop install dsh-vm-control
-# or, inside the checkout
+
+# or use it as a plain npm package
+npm install dsh-vm-control
+
+# or install from a local checkout (development)
 dsh plugin --profile desktop install .
 ```
 
 **Restart DSH afterwards** — host-side tools and routes are loaded at startup.
+
+The publishing flow (fields, packing checks, account and 2FA, troubleshooting) is documented in [PUBLISHING.md](PUBLISHING.md).
 
 ## Quick start
 
