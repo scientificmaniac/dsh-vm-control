@@ -1,0 +1,4 @@
+- insert:
+    - id: vm-control
+      name: 'dsh-vm-control'
+      config: {}

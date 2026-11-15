@@ -1,0 +1,8 @@
+# 仓库内统一 LF：插件要在 Windows / macOS / Linux 上以同一份文件运行，
+# 让 core.autocrlf 在检出时改写行尾只会制造「本地看起来有 diff」的噪声。
+* text=auto eol=lf
+
+# 二进制类文件不参与行尾规范化。
+*.png binary
+*.ico binary
+*.tgz binary

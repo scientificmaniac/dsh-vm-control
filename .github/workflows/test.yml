@@ -1,0 +1,41 @@
+# 只跑不需要 VMware 的三组测试。
+#
+# 联调（test/live.mjs）刻意不进 CI：它需要一台装好 VMware 的机器，而且「跑得通」
+# 依赖于那台机器上有几台虚拟机。把它塞进 runner 只会变成一条永远跳过的绿色记录。
+name: tests
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: node ${{ matrix.node }} · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # 插件声明 engines.node >= 20；两端各取一个已验证的版本。
+        node: ['20', '22']
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Unit, API and client tests
+        run: npm test
+
+      - name: Syntax check for every module
+        shell: bash
+        run: |
+          for file in index.js client.js lib/*.js lib/locales/*.js; do
+            node --check "$file"
+          done

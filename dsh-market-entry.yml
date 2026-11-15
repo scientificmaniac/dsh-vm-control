@@ -1,0 +1,6 @@
+name: dsh-vm-control
+category: remote
+description:
+  en: "Control local VMware Workstation / Player / Fusion virtual machines: start, stop, pause, snapshots, live CPU and memory use, network layout and VMX parameters. Power, snapshot and delete are separate permissions."
+  zh: "管理本机 VMware Workstation / Player / Fusion 虚拟机：启动、停止、暂停、快照、实时 CPU 与内存占用、网络配置与 VMX 参数。电源、快照与删除分属独立权限。"
+icon: ./icon.svg
