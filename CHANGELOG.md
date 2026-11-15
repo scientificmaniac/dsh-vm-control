@@ -8,9 +8,8 @@ All notable changes to this plugin are documented here. The format follows
 
 ### Changed
 
-- Added the npm publishing metadata: `main`, `author`, `publishConfig` (public access + official registry), a `prepublishOnly` guard and a `publish:npm` shortcut.
-- Added `PUBLISHING.md` / `PUBLISHING.zh-CN.md`: the full path from field configuration and packing checks to publishing, verification, version bumps and common errors.
-- **No functional changes**; this release only touches packaging metadata and docs, and 1.1.0 behaviour is unchanged.
+- `package.json` gained the remaining package metadata: `main` (a fallback for tooling that ignores `exports`) and `author`.
+- **No functional changes**; 1.1.0 behaviour is unchanged.
 
 ## [1.1.0] - 2026-11-15
 

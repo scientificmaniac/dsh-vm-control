@@ -7,9 +7,8 @@
 
 ### 变更
 
-- 补齐 npm 发布所需的元数据：`main`、`author`、`publishConfig`（公开访问 + 官方 registry）、`prepublishOnly` 守卫，以及 `publish:npm` 快捷脚本。
-- 新增 `PUBLISHING.md` / `PUBLISHING.zh-CN.md`：从字段配置、打包校验到发布、验证、版本更新与常见错误的完整流程。
-- 本版**没有功能改动**，仅打包元数据与文档；1.1.0 的行为完全不变。
+- `package.json` 补齐包的元数据：`main`（给不认 `exports` 的工具兜底）与 `author`。
+- 本版**没有功能改动**；1.1.0 的行为完全不变。
 
 ## [1.1.0] - 2026-11-15
 
