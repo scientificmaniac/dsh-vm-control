@@ -6,8 +6,18 @@
 
 **VMware VM management for the DeepSeek Harness: power, snapshots, live resource use, network layout and VMX parameters in one place.**
 
-[![tests](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml/badge.svg)](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<!-- npm -->
+[![npm version](https://img.shields.io/npm/v/dsh-vm-control.svg)](https://www.npmjs.com/package/dsh-vm-control)
+[![npm downloads](https://img.shields.io/npm/dm/dsh-vm-control.svg)](https://www.npmjs.com/package/dsh-vm-control)
+[![npm license](https://img.shields.io/npm/l/dsh-vm-control.svg)](https://www.npmjs.com/package/dsh-vm-control)
+[![node](https://img.shields.io/node/v/dsh-vm-control.svg)](https://nodejs.org/)
+[![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](package.json)
+
+<!-- repo -->
+[![tests](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml)
+[![GitHub stars](https://img.shields.io/github/stars/scientificmaniac/dsh-vm-control.svg)](https://github.com/scientificmaniac/dsh-vm-control)
+[![GitHub issues](https://img.shields.io/github/issues/scientificmaniac/dsh-vm-control.svg)](https://github.com/scientificmaniac/dsh-vm-control/issues)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/scientificmaniac/dsh-vm-control/pulls)
 
 [Changelog](CHANGELOG.md) · [Security](SECURITY.md)
 

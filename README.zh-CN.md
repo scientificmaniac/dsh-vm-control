@@ -6,8 +6,18 @@
 
 **DeepSeek Harness 的 VMware 虚拟机管理插件：电源、快照、实时占用、网络配置与 VMX 参数，一处管完。**
 
-[![tests](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml/badge.svg)](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<!-- npm -->
+[![npm 版本](https://img.shields.io/npm/v/dsh-vm-control.svg)](https://www.npmjs.com/package/dsh-vm-control)
+[![npm 月下载量](https://img.shields.io/npm/dm/dsh-vm-control.svg)](https://www.npmjs.com/package/dsh-vm-control)
+[![npm 许可证](https://img.shields.io/npm/l/dsh-vm-control.svg)](https://www.npmjs.com/package/dsh-vm-control)
+[![Node 版本](https://img.shields.io/node/v/dsh-vm-control.svg)](https://nodejs.org/)
+[![运行时依赖](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](package.json)
+
+<!-- 仓库 -->
+[![测试](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/scientificmaniac/dsh-vm-control/actions/workflows/test.yml)
+[![GitHub stars](https://img.shields.io/github/stars/scientificmaniac/dsh-vm-control.svg)](https://github.com/scientificmaniac/dsh-vm-control)
+[![GitHub issues](https://img.shields.io/github/issues/scientificmaniac/dsh-vm-control.svg)](https://github.com/scientificmaniac/dsh-vm-control/issues)
+[![欢迎 PR](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/scientificmaniac/dsh-vm-control/pulls)
 
 [更新日志](CHANGELOG.zh-CN.md) · [安全说明](SECURITY.zh-CN.md)
 
