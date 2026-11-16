@@ -1,7 +1,21 @@
+# 依赖与构建产物
 node_modules/
+# 发行产物：由 `npm run release` 生成
+dist/
 *.tgz
+
+# 凭据与本地环境：绝不进版本库
+.npmrc
+.env
+.env.local
+.env.*.local
+
+# 日志与临时文件
 *.log
+*.tmp
+
+# 操作系统与编辑器
 .DS_Store
 Thumbs.db
-# 发行产物：由 `npm run release` 生成，不进入版本库
-dist/
+.idea/
+.vscode/
