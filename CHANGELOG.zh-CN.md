@@ -3,13 +3,6 @@
 本文件记录本插件所有值得注意的改动。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [1.1.1] - 2026-11-15
-
-### 变更
-
-- `package.json` 补齐包的元数据：`main`（给不认 `exports` 的工具兜底）与 `author`。
-- 本版**没有功能改动**；1.1.0 的行为完全不变。
-
 ## [1.1.0] - 2026-11-15
 
 ### 新增

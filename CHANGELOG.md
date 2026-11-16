@@ -4,13 +4,6 @@ All notable changes to this plugin are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.1.1] - 2026-11-15
-
-### Changed
-
-- `package.json` gained the remaining package metadata: `main` (a fallback for tooling that ignores `exports`) and `author`.
-- **No functional changes**; 1.1.0 behaviour is unchanged.
-
 ## [1.1.0] - 2026-11-15
 
 ### Added
