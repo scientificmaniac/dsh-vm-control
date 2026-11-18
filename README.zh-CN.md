@@ -76,7 +76,9 @@ dsh plugin --profile desktop install .
 约定：
 
 - **先看状态再动手。** `vm_power` 会先判定当前状态：对已关机的虚拟机执行 `stop`、对运行中的执行 `start` 都会被拒绝并说明原因，而不是让 vmrun 抛一句 `The virtual machine is not powered on`。
-- **动作之后确认。** `vmrun start` 成功返回只代表命令被接受；工具会等状态真的变化（最多到各自的超时）再报告结果。等不到时会明说「已发出但未能确认」，不会把不确定说成成功。
+- **动作之后确认。** `vmrun start` 成功返回只代表命令被接受；工具会等状态真的变化再报告结果。等不到时会明说「已发出但未能确认」，并明确「没看到结果」不等于「操作失败」——此时应当先读一次状态，而不是重发命令。`timeoutMs` 是**整次调用**的总额（覆盖 vmrun 本身与随后的状态确认），不是两段各自计时。
+- **超时不算失败。** vmrun 被超时杀掉只说明「没在时限内返回」，启动请求其实早已交给 VMware。此时工具不会判失败，而是继续查真实状态并据此收尾，同时说明结论来自实际状态而非退出码；只有 vmrun 明确报错（如 vmx 不存在）才算失败。
+- **优先无头启动。** `gui: true` 会等 VMware 窗口起来才返回，明显更慢，还需要桌面会话；脚本化场景用默认的 `nogui`，要看画面时再单独打开 VMware 窗口。GUI 启动的默认超时因此单独设为 60 秒。
 - **软/硬两种力度。** `stop` / `suspend` / `reset` 默认 `soft`（请客户机自行处理，需要 VMware Tools），`hard` 相当于拔电源。
 - **加密虚拟机**用 `credential_ref` 指向 DSH 凭据，插件只存引用；口令仅在 VMware 明确报「这台虚拟机是加密的」时才向凭据服务索取。
 - **删除分三种。** `keep_files`（只移除记录）、默认（把目录移到插件回收站）、`purge`（`vmrun deleteVM`，连磁盘一起删，需要显式 `confirm` 与 `permissions.delete`）。
@@ -173,7 +175,7 @@ dsh plugin --profile desktop install .
 | `vmrunPath` | 自动发现 | `vmrun` 绝对路径 |
 | `vmType` | `auto` | `ws` / `player` / `fusion` / `auto`；auto 会逐个尝试 |
 | `vmrunTimeoutMs` | `90000` | 单次 vmrun 调用的默认超时 |
-| `timeoutMs` | 按动作 | 等待状态变化的默认上限 |
+| `timeoutMs` | 按动作 | 整次电源调用的总预算（vmrun 耗时 + 状态确认）；GUI 启动默认 60 秒 |
 | `permissions` | 见上表 | 四个作用域开关 |
 | `collectMetrics` | `true` | 是否采集宿主侧 CPU/内存占用 |
 | `logging` | `false` | `true` 或 `{ enabled, dir, maxBytes }`；关闭时不写任何日志 |
@@ -184,7 +186,7 @@ dsh plugin --profile desktop install .
 
 - **运行态**以 `vmrun list` 为准。它把暂停中的虚拟机也算「运行中」，所以「暂停」这一状态由插件自己记住（`pause` 之后写入记录）——通过 VMware 窗口暂停的虚拟机会显示为运行中，这是已知且无法从命令行消除的差别。
 - **残留的 `.vmx.lck` 目录不可信。** VMware 崩溃或强制断电后不会清理它；早期实现按锁目录判断，结果把七台关机状态的虚拟机全部显示成「运行中」。现在只有在 `vmrun list` 读取失败时才退回文件启发式。
-- **挂起**看 `.vmss` 镜像文件：挂起本质上是关机 + 内存镜像，`vmrun list` 不会包含它。
+- **挂起**看 `.vmss` 镜像文件：挂起本质上是关机 + 内存镜像，`vmrun list` 不会包含它。注意 VMware 写的是 `<name>-<hash>.vmss`（如 `CentOS 7-b846c30e.vmss`），哈希由 VMware 生成且不写进 vmx，所以这里按目录前缀扫描而不是拼固定文件名。
 - **资源占用**来自宿主进程：每台运行中的虚拟机对应一个 `vmware-vmx` 进程，命令行里带着它服务的 vmx 路径，于是「进程 → 虚拟机」的映射是确定的。Windows 用 PowerShell 一次取回 CPU%、工作集、私有字节、线程数与 IO；macOS / Linux 退回 `ps`，只有 CPU 与 RSS（那些平台上没有等价物，缺的字段留空而不是编一个值）。
 - **网络信息**读自 VMX：连接方式（nat / bridged / hostonly / custom）、虚拟网络名（17.x 在 `vnet`，老版本在 `networkName`）、虚拟设备型号、MAC。客户机内部 IP 需要 VMware Tools，只在点「客户机信息」时按需查询。
 - **采集失败不会让列表消失**：占用读不到时那一栏留空并给出原因，虚拟机本身照常可管。

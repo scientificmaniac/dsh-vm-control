@@ -1,6 +1,6 @@
 {
   "name": "dsh-vm-control",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "VMware Workstation / Player / Fusion virtual machine control for the DeepSeek Harness — power, snapshots, live resources and network configuration",
   "keywords": [
     "dsh",

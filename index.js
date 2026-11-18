@@ -316,6 +316,9 @@ export function apply(ctx, config = {}) {
       + 'After issuing the command it waits for the state to actually change and reports the confirmed new state, because a successful '
       + 'vmrun exit only means the command was accepted — the VM can still die a second later. '
       + 'Defaults: stop/suspend/reset are soft (ask the guest to shut down), start is headless (nogui). '
+      + 'Prefer gui=false: a GUI start is much slower (vmrun waits for the window), keeps a desktop session and is not needed for '
+      + 'scripted work; open the VMware window separately if someone needs to watch the screen. '
+      + 'When the result is unconfirmed, the command was still issued — read the state with action=status instead of resending it. '
       + 'Requires permissions.power in the plugin config.',
     parameters: {
       type: 'object',
@@ -340,11 +343,14 @@ export function apply(ctx, config = {}) {
         gui: {
           type: 'boolean',
           description: 'Start with the VMware window (gui) instead of headless (nogui, the default). A GUI window needs an interactive '
-            + 'desktop session; under a service account it may appear on another desktop or not at all.',
+            + 'desktop session; under a service account it may appear on another desktop or not at all. It is also slower: vmrun may '
+            + 'stay in the foreground until the window is up.',
         },
         timeoutMs: {
           type: 'number',
-          description: 'How long to wait for the state change, in milliseconds. Defaults to the per-action limit (120-180s).',
+          description: 'Total budget for the whole call, in milliseconds: it covers vmrun itself and the state confirmation that '
+            + 'follows. Defaults to the per-action limit (30-180s; a gui start defaults to 60s). Lower it when you would rather get '
+            + '"issued, not confirmed" quickly than block.',
         },
       },
       required: ['vm', 'action'],

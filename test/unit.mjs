@@ -27,9 +27,10 @@ import {
   parseUsage,
   candidateVmrunPaths,
   discoverVmrun,
+  runProcess,
 } from '../lib/vmrun.js'
 import { guestFamilyOf, infoFromEntries, parseVmx, quote, readVmx, writeVmx, writeVmxText } from '../lib/vmx.js'
-import { renderList, stateLabel } from '../lib/format.js'
+import { renderList, renderPowerOutcome, stateLabel } from '../lib/format.js'
 import {
   SSH_VAULT_SAVE_FIELDS,
   aliasFor,
@@ -375,6 +376,28 @@ await test('classifyFailure 按优先级归类失败', () => {
   assert.equal(classifyFailure('something odd happened'), 'unknown')
 })
 
+await test('runProcess 在孙进程继承管道时仍按时落定（电源工具卡死的根因）', async () => {
+  // `vmrun start <vmx> gui` 拉起的图形窗口会继承本进程的 stdout/stderr 管道。
+  // 超时后只 kill 掉直接子进程时，`close` 因管道未关而永不触发，promise 于是永不落定：
+  // 调用方看到的是工具无响应，而不是一次「已超时」的结果。这里用同样形态的子进程复现。
+  //
+  // 孙进程只活 8 秒：它必须活得比 `runProcess` 的超时更长才会暴露问题，但不能长到
+  // 让测试进程本身收不了尾——测试运行器自己的 stdout 也被它继承了。
+  const parent = `
+    const { spawn } = require('node:child_process')
+    spawn(process.execPath, ['-e', 'setTimeout(() => {}, 8000)'], { stdio: 'inherit', detached: true }).unref()
+    console.log('parent: spawned grandchild, staying alive')
+    setInterval(() => {}, 1000)
+  `
+  const started = Date.now()
+  const timeoutMs = 1200
+  const result = await runProcess(process.execPath, ['-e', parent], { timeoutMs })
+  const elapsed = Date.now() - started
+  assert.equal(result.timedOut, true, '应当报告为超时')
+  assert.ok(elapsed < timeoutMs + 5000, `落定太晚：${elapsed}ms，说明仍在等被孙进程占着的管道`)
+  assert.ok(result.stdout.includes('grandchild'), '超时前已到达的 stdout 不能丢')
+})
+
 await test('每个失败类别都有本地化归因', () => {
   for (const key of Object.values(CATEGORY_MESSAGE)) {
     assert.ok(hasMessage(key), `missing message ${key}`)
@@ -498,6 +521,26 @@ await test('Inventory.list 合并扫描结果与运行状态', async () => {
   await rm(dataDir, { recursive: true, force: true })
 })
 
+await test('挂起镜像按 VMware 的 <name>-<hash>.vmss 命名识别', async () => {
+  // 真实机器上 VMware 写的是 `CentOS 7-b846c30e.vmss`，不是 `<name>.vmss`。
+  // 早期实现只找后者，于是所有挂起状态都被显示成「已停止」，「已挂起」这个状态词
+  // 在真实环境里从未出现过。这里同时确认不会误伤名字互为前缀的虚拟机。
+  const root = await tempDir('vm-suspend-name')
+  await makeVm(root, 'box', 'Box')
+  await makeVm(root, 'box2', 'Box 最小系统')
+  // 只给 box 造一个带哈希的挂起镜像。
+  await writeFile(path.join(root, 'box', 'Box-b846c30e.vmss'), 'image', 'utf8')
+  await writeFile(path.join(root, 'box', 'Box-b846c30e.vmem'), 'mem', 'utf8')
+
+  const { inventory, dataDir } = await makeInventory({ root })
+  const result = await inventory.list({ includeMetrics: false })
+  const byName = new Map(result.entries.map((entry) => [entry.name, entry]))
+  assert.equal(byName.get('Box').state, 'suspended', '带哈希的挂起镜像应被认出')
+  assert.equal(byName.get('Box 最小系统').state, 'stopped', '前缀相同的另一台不能误判为挂起')
+  await rm(root, { recursive: true, force: true })
+  await rm(dataDir, { recursive: true, force: true })
+})
+
 await test('Inventory.resolve 支持名字、路径，并对重名报歧义', async () => {
   const root = await tempDir('vm-resolve')
   const vmx = await makeVm(root, 'one', 'Twin')
@@ -547,6 +590,171 @@ await test('Inventory.power 在 vmrun 失败时交回失败结果与类别', asy
   assert.equal(outcome.ok, false)
   assert.equal(outcome.reason, 'vmrun')
   assert.equal(outcome.result.category, 'vm-missing')
+  await rm(root, { recursive: true, force: true })
+  await rm(dataDir, { recursive: true, force: true })
+})
+
+await test('Inventory.power 把 vmrun 超时当作「结果未知」而非失败', async () => {
+  // 真实踩到的坑：给 start 一个极短超时，vmrun 被杀，但虚拟机其实已经起来了。
+  // 旧代码把这种情况判成「start 失败」，等于谎报一次成功的启动；正确做法是继续确认状态，
+  // 由实际状态决定结论，并把「vmrun 没给出答案」这个事实单独标出来。
+  const root = await tempDir('vm-power-indeterminate')
+  const vmx = await makeVm(root, 'one', 'One')
+  const dataDir = await tempDir('vm-control-data')
+  const store = new Store({ dir: dataDir, roots: [root] })
+  const base = fakeVmrun({ running: [] })
+  const killedVmrun = {
+    ...base,
+    async power(action, target) {
+      // 命令被超时终止，但副作用已经落地：虚拟机在 VMware 那边真的起来了。
+      base.state.running.add(target.toLowerCase())
+      return {
+        ok: false,
+        code: null,
+        stdout: '',
+        stderr: '',
+        command: action,
+        category: 'timeout',
+        timedOut: true,
+        aborted: false,
+        durationMs: 2000,
+      }
+    },
+  }
+  const inventory = new Inventory({ store, vmrun: killedVmrun, trashDir: path.join(dataDir, 'trash'), metrics: false })
+
+  const outcome = await inventory.power(vmx, 'start')
+  assert.equal(outcome.ok, true, '命令超时但虚拟机已经起来时，不能报失败')
+  assert.equal(outcome.indeterminate, true, '必须标出结论来自事后状态而非 vmrun 的退出码')
+  assert.equal(outcome.to, 'running')
+  assert.equal(outcome.reason, 'confirmed')
+  await rm(root, { recursive: true, force: true })
+  await rm(dataDir, { recursive: true, force: true })
+})
+
+await test('Inventory.power 的终态与 confirmed 说同一件事（不含等待期旧值）', async () => {
+  // 报告里的 `to` 与 `reason` 必须来自同一次观测：`confirmed` 为真时 `to` 必须是目标状态。
+  // `#waitForState` 命中目标即返回、超时退出则留下最后一次轮询的值，因此 `power()` 在
+  // 生成报告前会重新读一次状态；这条测试保证那个「重新读」确实发生了。
+  //
+  // 构造方式：让 list 先报「未运行」若干次再报「运行中」，断言 confirmed 时终态是 running。
+  const root = await tempDir('vm-power-stale')
+  const vmx = await makeVm(root, 'one', 'One')
+  const dataDir = await tempDir('vm-control-data')
+  const store = new Store({ dir: dataDir, roots: [root] })
+
+  let powered = false
+  let listCalls = 0
+  const laggyVmrun = {
+    async probe() {
+      return { found: true, executable: 'x', source: 'test', version: '1.17.0', build: '1', hostType: 'ws', commands: ['start'], capabilitiesKnown: true }
+    },
+    invalidateList() {},
+    async list() {
+      listCalls += 1
+      // 启动之后先「看不见」两次（真实的中间态），第三次才承认。
+      const visible = powered && listCalls >= 3
+      return { ok: true, vms: visible ? [vmx] : [], raw: '', error: undefined }
+    },
+    async power(action) {
+      powered = true
+      return { ok: true, code: 0, stdout: '', stderr: '', command: action, category: undefined, durationMs: 10 }
+    },
+    describeFailure: () => '',
+  }
+  const inventory = new Inventory({ store, vmrun: laggyVmrun, trashDir: path.join(dataDir, 'trash'), metrics: false })
+
+  const outcome = await inventory.power(vmx, 'start', { timeoutMs: 8000 })
+  assert.equal(outcome.ok, true)
+  assert.equal(outcome.reason, 'confirmed', '循环内最终应看到 running')
+  assert.equal(outcome.to, 'running', `confirmed 为真时终态必须是目标状态，实际 ${outcome.to}`)
+  // 独立再问一次：绕过缓存后必须仍与报告一致。
+  inventory.invalidate()
+  assert.equal((await inventory.detail(vmx)).state, 'running', '清缓存后的观测应与报告一致')
+  await rm(root, { recursive: true, force: true })
+  await rm(dataDir, { recursive: true, force: true })
+})
+
+await test('Inventory.power 对非超时的 vmrun 失败仍判失败', async () => {
+  // 边界必须守住：只有超时 / 取消才走「结果未知」。vmrun 明确报错（例如 vmx 不存在）
+  // 时不能去查状态然后声称成功，那会把真正的故障藏起来。
+  const root = await tempDir('vm-power-hard-fail')
+  const vmx = await makeVm(root, 'one', 'One')
+  const dataDir = await tempDir('vm-control-data')
+  const store = new Store({ dir: dataDir, roots: [root] })
+  const base = fakeVmrun({ running: [] })
+  const brokenVmrun = {
+    ...base,
+    async power() {
+      return { ok: false, code: 1, stdout: '', stderr: 'Cannot open VM', command: 'start', category: 'vm-missing', timedOut: false, aborted: false }
+    },
+  }
+  const inventory = new Inventory({ store, vmrun: brokenVmrun, trashDir: path.join(dataDir, 'trash'), metrics: false })
+  const outcome = await inventory.power(vmx, 'start')
+  assert.equal(outcome.ok, false)
+  assert.equal(outcome.reason, 'vmrun')
+  await rm(root, { recursive: true, force: true })
+  await rm(dataDir, { recursive: true, force: true })
+})
+
+await test('renderPowerOutcome 说明「结论来自实际状态」而不是退出码', () => {
+  const entry = {
+    name: 'CentOS 7',
+    state: 'running',
+    cpus: 8,
+    memoryMB: 4096,
+    nics: [],
+    disks: [],
+    tags: [],
+    notes: '',
+    resources: undefined,
+  }
+  const text = renderPowerOutcome({
+    ok: true,
+    action: 'start',
+    entry,
+    from: 'stopped',
+    to: 'running',
+    reason: 'confirmed',
+    indeterminate: true,
+    timeoutMs: 5000,
+    notes: [],
+  })
+  // 必须同时说清三件事：结论、它来自哪里、以及这不是 vmrun 的退出码。
+  assert.ok(text.includes('运行中'), '应给出结论状态')
+  assert.match(text, /实际状态|actual state/, '应说明结论来自实际状态')
+  assert.match(text, /退出码|exit code/, '应点明不是来自退出码')
+})
+
+await test('Inventory.power 的确认预算不超过 timeoutMs，且仍会查一次状态', async () => {
+  // 回归：vmrun 耗时与状态确认曾经各算各的（前者最长 120 秒、后者 45 秒），一次卡住的
+  // 启动能挂到 165 秒以上。现在两者共用一个总额：给 6 秒预算时，即便 vmrun 已经把预算
+  // 花光，也必须落定，并把最后那次状态查询的结果交出去。
+  const root = await tempDir('vm-power-budget')
+  const vmx = await makeVm(root, 'one', 'One')
+  const dataDir = await tempDir('vm-control-data')
+  const store = new Store({ dir: dataDir, roots: [root] })
+  const base = fakeVmrun({ running: [] })
+  // 让 power 报「花了 20 秒」，远超 6 秒的总额。
+  const slowVmrun = {
+    ...base,
+    async power(action, target) {
+      base.state.running.add(target.toLowerCase())
+      return { ok: true, code: 0, stdout: '', stderr: '', command: action, category: undefined, durationMs: 20000 }
+    },
+  }
+  const inventory = new Inventory({ store, vmrun: slowVmrun, trashDir: path.join(dataDir, 'trash'), metrics: false })
+
+  const started = Date.now()
+  const outcome = await inventory.power(vmx, 'start', { timeoutMs: 6000 })
+  const elapsed = Date.now() - started
+
+  assert.equal(outcome.ok, true)
+  // 最坏情况：总额 6 秒 → 预算被 vmrun 花光 → 退到 5 秒下限 → 加上最后一次 detail 读取。
+  assert.ok(elapsed < 15000, `确认阶段没有受总额约束：耗时 ${elapsed}ms`)
+  assert.ok(outcome.timeoutMs >= 5000, '必须保留一次状态查询的最短窗口')
+  // 状态在 vmrun 返回后其实已经对了，所以这里应当确认成功。
+  assert.equal(outcome.reason, 'confirmed')
   await rm(root, { recursive: true, force: true })
   await rm(dataDir, { recursive: true, force: true })
 })
